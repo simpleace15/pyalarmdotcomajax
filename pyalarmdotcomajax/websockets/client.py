@@ -24,6 +24,7 @@ from pyalarmdotcomajax.devices.water_sensor import WaterSensor
 from pyalarmdotcomajax.exceptions import (
     AuthenticationFailed,
     UnexpectedResponse,
+    UnsupportedWebSocketMessage,
 )
 from pyalarmdotcomajax.websockets.handler.garage_door import GarageDoorWebSocketHandler
 from pyalarmdotcomajax.websockets.handler.gate import GateWebSocketHandler
@@ -135,8 +136,11 @@ class WebSocketClient:
 
                     try:
                         await self._async_handle_message(json.loads(msg.data))
-                    except (TypeError, ValueError):
-                        log.warning("Unable to parse message from Alarm.com: %s", msg.data)
+                    except (TypeError, ValueError, UnsupportedWebSocketMessage):
+                        # UnsupportedWebSocketMessage covers blacklisted/unknown-device
+                        # and unrecognized message types: skip just this message and keep
+                        # the connection alive instead of tearing it down and reconnecting.
+                        log.debug("Skipping unsupported message from Alarm.com: %s", msg.data)
                         # TODO: On failure, refresh everything synchronous HTTP endpoints.
                         pass
 

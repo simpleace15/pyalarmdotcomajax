@@ -33,6 +33,10 @@ def process_raw_message(message: dict, device_registry: DeviceRegistry) -> WebSo
             "Got a message for unknown device"
             f" {message['UnitId']}-{message['DeviceId']}:\n{json.dumps(message, indent=4)}"
         )
+        # Device unresolved -> 'device' is unbound in the block below, which raised
+        # UnboundLocalError and tore down the websocket on HA 2026. Treat it as an
+        # unsupported message instead (graceful skip).
+        raise UnsupportedWebSocketMessage(message) from None
 
     try:
         if {"FenceId", "IsInsideNow"} <= set(message.keys()):
